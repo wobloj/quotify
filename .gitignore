@@ -1,41 +1,66 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ==================================================
+# FRONTEND — Next.js
+# ==================================================
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Build output
+.next/
+out/
+dist/
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Node
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
+package-lock.json
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
+# Env files
+.env
+.env.local
+.env.*.local
 next-env.d.ts
+
+# Other Next.js artifacts
+.vercel/
+
+# ==================================================
+# BACKEND — ASP.NET Core (.NET 8)
+# ==================================================
+
+# Build folders
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS / Rider / VSCode
+.vscode/
+.vs/
+.idea/
+*.iml
+
+# ASP.NET published output
+wwwroot/
+
+# Secret config files
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+# EF Migrations snapshots (opcjonalnie)
+# *Designer.cs
+
+# Logs
+*.log
+logs/
+
+# ==================================================
+# OS system files
+# ==================================================
+.DS_Store
+Thumbs.db

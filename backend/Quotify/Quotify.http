@@ -1,0 +1,6 @@
+@Quotify_HostAddress = http://localhost:5226
+
+GET {{Quotify_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
