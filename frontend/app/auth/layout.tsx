@@ -11,6 +11,8 @@ import { Toaster } from "sonner";
 
 interface DecodedToken extends Record<string, unknown> {
   exp: number;
+  "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"?: string;
+  role?: string;
 }
 
 export default function AdminLayout({
@@ -21,72 +23,102 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const router = useRouter();
 
   const navItems = [
     { href: "/auth/quotes", label: "Cytaty" },
     { href: "/auth/categories", label: "Kategorie" },
+    { href: "/auth/suggestions", label: "Propozycje" },
   ];
 
-  // 🧠 Funkcja sprawdzająca ważność tokena JWT
-  const checkToken = () => {
-    const token = localStorage.getItem("jwt");
+  // 🧠 Funkcja sprawdzająca ważność tokena JWT i rolę administratora
+  useEffect(() => {
+    const checkToken = () => {
+      const token = localStorage.getItem("jwt");
 
-    if (!token) {
-      setIsTokenValid(false);
-      return;
-    }
-
-    try {
-      const decoded: DecodedToken = jwtDecode(token);
-      const currentTime = Date.now() / 1000; // sekundy
-      if (decoded.exp && decoded.exp > currentTime) {
-        setIsTokenValid(true);
-      } else {
+      if (!token) {
         setIsTokenValid(false);
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const decoded: DecodedToken = jwtDecode(token);
+        const currentTime = Date.now() / 1000; // sekundy
+        
+        if (decoded.exp && decoded.exp > currentTime) {
+          // Sprawdź rolę - może być w różnych miejscach w tokenie
+          const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || decoded.role;
+          const isAdminRole = role === "admin" || role === "Admin";
+          
+          setIsTokenValid(true);
+          setIsAdmin(isAdminRole);
+          
+          // Jeśli użytkownik nie jest administratorem, przekieruj na stronę główną
+          if (!isAdminRole) {
+            router.push("/");
+          }
+        } else {
+          setIsTokenValid(false);
+          setIsAdmin(false);
+          localStorage.removeItem("jwt");
+        }
+      } catch (error) {
+        console.error("Błąd podczas dekodowania tokena:", error);
+        setIsTokenValid(false);
+        setIsAdmin(false);
         localStorage.removeItem("jwt");
       }
-    } catch (error) {
-      console.error("Błąd podczas dekodowania tokena:", error);
-      setIsTokenValid(false);
-      localStorage.removeItem("jwt");
-    }
-  };
+    };
 
-  // 🔄 Sprawdź token po załadowaniu strony
-  useEffect(() => {
+    // 🔄 Sprawdź token po załadowaniu strony
     const timer = setTimeout(() => {
       checkToken();
     }, 0);
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 🕐 Możesz też ustawić okresowe sprawdzanie co np. minutę
-  useEffect(() => {
+    // 🕐 Okresowe sprawdzanie co minutę
     const interval = setInterval(() => checkToken(), 60000);
-    return () => clearInterval(interval);
-  }, []);
 
-  if (isTokenValid === false) {
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [router]);
+
+  if (isTokenValid === false || isAdmin === false) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 text-center">
         <h1 className="text-3xl font-semibold text-red-600">
-          Sesja wygasła lub nie jesteś zalogowany.
+          {isTokenValid === false 
+            ? "Sesja wygasła lub nie jesteś zalogowany."
+            : "Brak dostępu do panelu administratora."}
         </h1>
         <p className="text-lg text-gray-700">
-          Zaloguj się ponownie, aby uzyskać dostęp do panelu administratora.
+          {isTokenValid === false
+            ? "Zaloguj się ponownie, aby uzyskać dostęp do panelu administratora."
+            : "Tylko administratorzy mają dostęp do tej sekcji."}
         </p>
-        <Link
-          href="/login"
-          className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition"
-        >
-          Zaloguj ponownie
-        </Link>
+        {isTokenValid === false ? (
+          <Link
+            href="/login"
+            className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition"
+          >
+            Zaloguj ponownie
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition"
+          >
+            Powrót do strony głównej
+          </Link>
+        )}
       </div>
     );
   }
 
-  if (isTokenValid === null) {
+  if (isTokenValid === null || isAdmin === null) {
     return (
       <div className="flex items-center justify-center h-screen text-xl">
         Sprawdzanie autoryzacji...

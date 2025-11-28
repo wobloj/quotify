@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Playpen_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "sonner";
+import ClientAuthWrapper from "@/components/auth/ClientAuthWrapper";
 
 const playpenSans = Playpen_Sans({
   variable: "--font-playpen",
@@ -28,8 +30,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ClientAuthWrapper>
+            {children}
+          </ClientAuthWrapper>
         </ThemeProvider>
+        <Toaster richColors position="bottom-center" />
       </body>
     </html>
   );

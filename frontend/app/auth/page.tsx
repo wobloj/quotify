@@ -30,6 +30,18 @@ export default function AdminPage() {
             <Button>Przejdź do zarządzania kategoriami</Button>
           </Link>
         </div>
+        <div className="flex flex-col items-center border rounded-md flex-1 p-8 bg-background">
+          <p className="text-center text-2xl mb-4">Propozycje</p>
+          <p className="mb-4">Przejdź do podstrony z propozycjami by móc:</p>
+          <ul className="self-start ml-6 list-disc mb-4">
+            <li>Przeglądać propozycje użytkowników</li>
+            <li>Zatwierdzać cytaty</li>
+            <li>Odrzucać nieodpowiednie propozycje</li>
+          </ul>
+          <Link className="mt-4" href={"/auth/suggestions"}>
+            <Button>Przejdź do zarządzania propozycjami</Button>
+          </Link>
+        </div>
       </div>
     </>
   );

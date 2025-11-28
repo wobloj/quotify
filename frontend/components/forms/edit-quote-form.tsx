@@ -62,11 +62,16 @@ export default function EditForm({
         const data: FormValues = {
           text: res.data.text,
           author: res.data.author,
-          categoryId: res.data.categoryId,
+          categoryId: res.data.categoryId || 0,
         };
 
         setInitialData(data);
-        form.reset(data);
+        // Resetuj formularz z pobranymi danymi
+        form.reset({
+          text: data.text,
+          author: data.author,
+          categoryId: data.categoryId,
+        });
         setHasChanges(false);
       } catch (err) {
         if (axios.isAxiosError(err)) {
@@ -127,7 +132,7 @@ export default function EditForm({
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      toast.success("Pomyślnie wyedytowano kategorię.");
+      toast.success("Pomyślnie wyedytowano cytat.");
 
       setInitialData(values);
       setHasChanges(false);
@@ -139,6 +144,10 @@ export default function EditForm({
       setIsLoading(false);
     }
   };
+
+  if (isLoading && !initialData) {
+    return <Spinner />;
+  }
 
   return (
     <Form {...form}>
@@ -169,7 +178,10 @@ export default function EditForm({
               <FormControl>
                 <DropdownCategories
                   value={field.value}
-                  onChange={(val) => field.onChange(val)}
+                  onChange={(val) => {
+                    console.log("Zmieniona kategoria na:", val);
+                    field.onChange(val);
+                  }}
                 />
               </FormControl>
               <FormMessage />

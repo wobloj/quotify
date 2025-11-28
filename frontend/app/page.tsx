@@ -11,6 +11,9 @@ import UserLoggedIn from "@/components/features/UserLoggedIn";
 import { AnimatePresence, motion } from "framer-motion";
 import DropdownCategories from "@/components/features/DropdownCategories";
 import QuoteHistory from "@/components/features/QuoteHistory";
+import QuoteDisplay from "@/components/features/QuoteDisplay";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 const MAX_STORED_QUOTES = 15;
 
@@ -24,13 +27,14 @@ interface Quote {
 }
 
 export default function Home() {
-  const [isGenerating, setIsGenerating] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTokenPresent, setIsTokenPresent] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>(0);
-  const [animationKey, setAnimationKey] = useState<number>(0); // klucz animacji (wymusza zmianę elementu)
+  const [animationKey, setAnimationKey] = useState<number>(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [useOwnSuggestions, setUseOwnSuggestions] = useState(false);
 
   useEffect(() => {
     const checkToken = () => {
@@ -69,26 +73,61 @@ export default function Home() {
 
   const getQuote = async (categoryId?: number) => {
     try {
+      setError(null);
       setIsLoading(true);
-      let url = "https://localhost:7120/quotes/random";
-      if (categoryId && categoryId > 0) {
-        url += `?category_id=${categoryId}`;
-      }
 
-      const res = await axios.get(url);
-      if (res.status === 204) {
-        setError("Nie istnieją cytaty w wybranej kategorii.");
-        setQuote(null);
-        return;
-      }
+      let url: string;
+      const token = localStorage.getItem("jwt");
 
-      const newQuote = res.data;
-      setQuote(newQuote);
-      saveQuoteToStorage(newQuote);
-      setAnimationKey((prev) => prev + 1); // zmiana klucza → animacja
+      // Jeśli użytkownik chce losować ze swoich propozycji
+      if (useOwnSuggestions && token) {
+        url = "https://localhost:7120/api/SuggestedQuotes/user/random";
+        if (categoryId && categoryId > 0) {
+          url += `?category_id=${categoryId}`;
+        }
+
+        const res = await axios.get(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.status === 204) {
+          setError("Nie masz jeszcze żadnych propozycji w wybranej kategorii.");
+          setQuote(null);
+          return;
+        }
+
+        const newQuote = res.data;
+        setQuote(newQuote);
+        saveQuoteToStorage(newQuote);
+        setAnimationKey((prev) => prev + 1);
+      } else {
+        // Standardowe losowanie cytatów
+        url = "https://localhost:7120/quotes/random";
+        if (categoryId && categoryId > 0) {
+          url += `?category_id=${categoryId}`;
+        }
+
+        const res = await axios.get(url);
+        if (res.status === 204) {
+          setError("Nie istnieją cytaty w wybranej kategorii.");
+          setQuote(null);
+          return;
+        }
+
+        const newQuote = res.data;
+        setQuote(newQuote);
+        saveQuoteToStorage(newQuote);
+        setAnimationKey((prev) => prev + 1);
+      }
     } catch (error) {
       console.error("Error fetching quote:", error);
-      setError("Wystąpił błąd podczas pobierania cytatu.");
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        setError("Musisz być zalogowany, aby losować własne propozycje.");
+      } else {
+        setError("Wystąpił błąd podczas pobierania cytatu.");
+      }
     } finally {
       setIsLoading(false);
       setIsGenerating(true);
@@ -97,13 +136,6 @@ export default function Home() {
 
   const handleCategoryChange = (categoryId: number) => {
     setSelectedCategoryId(categoryId);
-  };
-
-  // warianty animacji dla cytatów
-  const quoteVariants = {
-    enter: { x: 300, opacity: 0 },
-    center: { x: 0, opacity: 1 },
-    exit: { x: -300, opacity: 0 },
   };
 
   return (
@@ -115,72 +147,54 @@ export default function Home() {
           </h1>
         </motion.div>
       ) : (
-        <div className="relative w-full flex justify-center items-center min-h-[250px]">
-          <AnimatePresence mode="wait">
-            {!isGenerating ? (
-              <motion.div
-                key="welcome"
-                initial={{ x: 0, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -300, opacity: 0 }}
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-                className="absolute flex flex-col items-center gap-5"
-              >
-                <h1 className="text-4xl sm:text-5xl font-semibold text-[#A2AF9B]">
-                  Hello Quotify
-                </h1>
-                <p className="text-sm sm:text-base">
-                  Generate your daily quote by pressing this button.
-                </p>
-              </motion.div>
-            ) : (
-              <motion.div
-                key={animationKey}
-                variants={quoteVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-                className="w-4/6 md:w-3/6 sm:w-2/6 text-center"
-              >
-                <p className="text-center text-xl mb-10">#{quote?.id}</p>
-                <p className="text-xl sm:text-3xl mb-10 text-center">
-                  {quote?.text}
-                </p>
-                <div className="flex flex-row justify-between">
-                  <span className="italic text-sm sm:text-base">
-                    ~ {quote?.author}
-                  </span>
-                  <Badge variant={"secondary"}>{quote?.categoryName}</Badge>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <QuoteDisplay
+          isGenerating={isGenerating}
+          animationKey={animationKey}
+          data={quote}
+        />
       )}
 
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1, transition: { delay: 0.3 } }}
-        className="flex flex-col sm:flex-row items-center gap-4 sm:gap-10"
+        className="flex flex-col items-center gap-4"
       >
-        <Button
-          onClick={() =>
-            getQuote(selectedCategoryId > 0 ? selectedCategoryId : undefined)
-          }
-          size={"lg"}
-          variant={"outline"}
-          className="cursor-pointer w-40 h-9"
-        >
-          {isLoading ? <Spinner /> : "Losuj cytat!"}
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-10">
+          <Button
+            onClick={() =>
+              getQuote(selectedCategoryId > 0 ? selectedCategoryId : undefined)
+            }
+            size={"lg"}
+            variant={"outline"}
+            className="cursor-pointer w-40 h-9 hover:bg-secondary"
+          >
+            {isLoading ? <Spinner /> : "Losuj cytat!"}
+          </Button>
 
-        <div className="w-52">
-          <DropdownCategories
-            value={selectedCategoryId}
-            onChange={handleCategoryChange}
-          />
+          <div className="w-52">
+            <DropdownCategories
+              value={selectedCategoryId}
+              onChange={handleCategoryChange}
+            />
+          </div>
         </div>
+
+        {isTokenPresent && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center space-x-2"
+          >
+            <Switch
+              id="use-suggestions"
+              checked={useOwnSuggestions}
+              onCheckedChange={setUseOwnSuggestions}
+            />
+            <Label htmlFor="use-suggestions" className="cursor-pointer">
+              Losuj z moich propozycji
+            </Label>
+          </motion.div>
+        )}
       </motion.div>
 
       {isTokenPresent ? <UserLoggedIn /> : <LoginButton />}

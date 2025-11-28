@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Quotify.DTOs;
 using Quotify.Services;
 using Quotify.Data;
+using Quotify.Models;
 
 namespace Quotify.Controllers
 {
@@ -33,6 +35,36 @@ namespace Quotify.Controllers
                 Token = token,
                 Email = user.Email,
                 Role = user.Role
+            });
+        }
+
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest req)
+        {
+            if (await _db.Users.AnyAsync(u => u.Email == req.Email))
+            {
+                return BadRequest(new { message = "Email is already registered." });
+            }
+
+            var user = new User
+            {
+                Email = req.Email,
+                PasswordHash = _authService.HashPassword(req.Password),
+                Role = "User"
+            };
+
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+
+            var token = _authService.GenerateJwtToken(user);
+
+            return Ok(new RegisterResponse
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Role = user.Role,
+                Token = token
             });
         }
     }

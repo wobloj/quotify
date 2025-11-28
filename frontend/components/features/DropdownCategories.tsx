@@ -69,14 +69,13 @@ export default function DropdownCategories({ value, onChange }: Props) {
         onChange(num); // zwracamy liczbę; komponent rodzic powinien traktować 0 jako "wszystkie"
       }}
     >
-      <SelectTrigger className="w-full">
+      <SelectTrigger className="w-full cursor-pointer hover:bg-secondary">
         <SelectValue
           placeholder={loading ? "Ładowanie..." : "Wybierz kategorię"}
         />
       </SelectTrigger>
 
       <SelectContent>
-        {/* opcja 'Wszystkie' */}
         <SelectItem value={"0"}>Wszystkie kategorie</SelectItem>
 
         {categories.map((cat) => (

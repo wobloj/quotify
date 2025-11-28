@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetClose,
@@ -23,13 +26,39 @@ interface Quote {
 }
 
 export default function QuoteHistory() {
-  const storedQuotes = JSON.parse(
-    localStorage.getItem("storedQuotes") || "[]"
-  ).sort(
-    (a: Quote, b: Quote) => (b.timestamp || 0) - (a.timestamp || 0)
-  ) as Quote[];
+  const [storedQuotes, setStoredQuotes] = useState<Quote[]>([]);
+
+  const loadQuotesFromStorage = () => {
+    // Ładowanie historii z localStorage
+    if (typeof window !== "undefined") {
+      try {
+        const quotes = JSON.parse(
+          localStorage.getItem("storedQuotes") || "[]"
+        ).sort(
+          (a: Quote, b: Quote) => (b.timestamp || 0) - (a.timestamp || 0)
+        ) as Quote[];
+        setStoredQuotes(quotes);
+      } catch (error) {
+        console.error("Błąd podczas ładowania historii cytatów:", error);
+        setStoredQuotes([]);
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Ładowanie historii przy pierwszym zamontowaniu komponentu
+    loadQuotesFromStorage();
+  }, []);
+
+  const handleOpenChange = (open: boolean) => {
+    // Odśwież historię za każdym razem gdy panel jest otwierany
+    if (open) {
+      loadQuotesFromStorage();
+    }
+  };
+
   return (
-    <Sheet>
+    <Sheet onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         <Button className="fixed top-0 left-0 m-4" variant="outline">
           Historia cytatów
